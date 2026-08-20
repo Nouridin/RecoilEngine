@@ -235,16 +235,22 @@ namespace QTPFS {
 		const float3& GetBoundingBoxMaxs() const { return boundingBoxMaxs; }
 
 		void SetPoint(unsigned int i, const float3& p) {
+			if (points.empty()) return;
 			checkPointInBounds(p);
-			points[std::min(i, NumPoints() - 1)] = p;
+			points[std::min<size_t>(i, points.size() - 1)] = p;
 		}
-		const float3& GetPoint(unsigned int i) const { return points[std::min(i, NumPoints() - 1)]; }
+
+		const float3& GetPoint(unsigned int i) const {
+			assert(!points.empty());
+			return points[std::min<size_t>(i, points.size() - 1)];
+		}
 
 		void RemovePoint(unsigned int index) {
-			unsigned int start = std::min(index, NumPoints() - 1), end = NumPoints() - 1;
-			for (unsigned int i = start; i < end; ++i) { points[i] = points[i+1]; }
-			points.pop_back();
-			if (index < repathAtPointIndex) repathAtPointIndex--;
+			if (index >= points.size()) return;
+			points.erase(points.begin() + index);
+			if (index < repathAtPointIndex && repathAtPointIndex > 0) {
+				repathAtPointIndex--;
+			}
 		}
 
 		void SetNode(unsigned int i, uint32_t nodeId, uint32_t nodeNumber, float2&& netpoint, int pointIdx, bool isBad) {
@@ -260,10 +266,8 @@ namespace QTPFS {
 		};
 
 		void RemoveNode(size_t index) {
-			if (index >= nodes.size()) { return; }
-			unsigned int start = index, end = nodes.size() - 1;
-			for (unsigned int i = start; i < end; ++i) { nodes[i] = nodes[i+1]; }
-			nodes.pop_back();
+    		if (index >= nodes.size()) return;
+    		nodes.erase(nodes.begin() + index);
 		}
 
 		void SetNodeBoundary(unsigned int i, int xmin, int zmin, int xmax, int zmax) {
@@ -272,8 +276,11 @@ namespace QTPFS {
 			nodes[i].xmax = xmax;
 			nodes[i].zmax = zmax;
 		}
+
 		// There are always (points - 1) valid path nodes.
-		uint32_t GetGoodNodeCount() const { return points.size() - 1; };
+		uint32_t GetGoodNodeCount() const { 
+			return points.empty() ? 0U : static_cast<uint32_t>(points.size() - 1);
+		};
 
 		void SetSourcePoint(const float3& p) { /* checkPointInBounds(p); */ assert(points.size() >= 2); points[                0] = p; }
 		void SetTargetPoint(const float3& p) { /* checkPointInBounds(p); */ assert(points.size() >= 2); points[points.size() - 1] = p; }
@@ -295,24 +302,15 @@ namespace QTPFS {
 			points.clear();
 			points.resize(n);
 		}
-		void CopyPoints(const IPath& p) {
-			AllocPoints(p.NumPoints());
 
-			for (unsigned int n = 0; n < p.NumPoints(); n++) {
-				points[n] = p.GetPoint(n);
-			}
-		}
+		void CopyPoints(const IPath& p) { points = p.points; }
+
 		void AllocNodes(unsigned int n) {
 			nodes.clear();
 			nodes.resize(n);
 		}
-		void CopyNodes(const IPath& p) {
-			AllocNodes(p.nodes.size());
 
-			for (unsigned int n = 0; n < p.nodes.size(); n++) {
-				nodes[n] = p.GetNode(n);
-			}
-		}
+		void CopyNodes(const IPath& p) { nodes = p.nodes; }
 
 		// Function is for debugging and logging purposes only
 		uint32_t CalculateHash() const {
@@ -345,15 +343,15 @@ namespace QTPFS {
 		spring_time GetSearchTime() const { return searchTime; }
 
 		// Incomplete paths need to be rebuilt from time to time as the owner makes progress.
-		unsigned int GetRepathTriggerIndex() const { return repathAtPointIndex; }
+		uint32_t GetRepathTriggerIndex() const { return repathAtPointIndex; }
 		void SetRepathTriggerIndex(unsigned int index) { repathAtPointIndex = index; }
 
 		void ClearGetRepathTriggerIndex() { repathAtPointIndex = 0; }
 
-		float3 GetGoalPosition() const { return goalPosition; }
+		const float3& GetGoalPosition() const { return goalPosition; }
 		void SetGoalPosition(float3 point) { goalPosition = point; }
 
-		unsigned int GetFirstNodeIdOfCleanPath() const { return firstNodeIdOfCleanPath; }
+		uint32_t GetFirstNodeIdOfCleanPath() const { return firstNodeIdOfCleanPath; }
 		void SetFirstNodeIdOfCleanPath(int nodeId) { firstNodeIdOfCleanPath = nodeId; }
 
 		bool IsRawPath() const { return isRawPath; }
