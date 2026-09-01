@@ -943,7 +943,15 @@ bool CKeyBindings::ExecuteCommandInternal(const std::string& line)
 		scanCodes.Reset();
 		bindingsCount = 0;
 		buildHotkeyMap = true;
-		Bind("enter", "chat"); // bare minimum
+
+		Bind("enter", "chat");
+    	Bind("enter", "edit_return");
+    	Bind("escape", "edit_escape");
+    	Bind("backspace", "edit_backspace");
+    	Bind("delete", "edit_delete");
+    	Bind("left", "edit_prev_char");
+    	Bind("right", "edit_next_char");
+
 
 		if (debugEnabled)
 			LOG("[CKeyBindings::%s] line=%s", __func__, line.c_str());
